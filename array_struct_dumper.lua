@@ -6,6 +6,7 @@ script calculates the memory offsets of each field and reads out the correspondi
 
 --[[ CONFIG ]]--
 
+local endianness = 1    --Set to 0 for big endian, 1 for little endian. 
 local is_2D = true           --switch between 1D and 2D modes
 local write_to_file = false
 local output_path = "arr_struct_reader_out.txt"
@@ -45,7 +46,11 @@ local struct = {
     pack("y_start", 2),
     pack("skip", 4),
     pack("is_invalid", 1),
-    pack("skip", 14),
+    pack("skip", 10),
+    pack("is_connect_to_top", 1),
+    pack("is_connect_to_bottom", 1),
+    pack("is_connect_to_left", 1),
+    pack("is_connect_to_right", 1),
     pack("should_connect_to_top", 1),
     pack("should_connect_to_bottom", 1),
     pack("should_connect_to_left", 1),
@@ -73,11 +78,17 @@ local function read_memory_bytes(currAddress, name, size)
         currAddress = currAddress + size --skip t bytes forward
     else
         local byte_string = ""
-        for addr = currAddress, currAddress + size do
-            byte_string = string.format("%0" .. size*2 .. "x", memory.readbyte(addr))
+        if endianness == 0 then --big endian
+            for addr = currAddress, currAddress + size -1 do
+                byte_string = string.format("%0" .. size*2 .. "x", memory.readbyte(addr))
+            end
+        else    --little endian
+            for addr = currAddress + size, currAddress, -1 do
+                byte_string = string.format("%0" .. size*2 .. "x", memory.readbyte(addr))
+            end
         end
-        ret = "  " .. name .. ": " .. byte_string
         currAddress = currAddress + size
+        ret = "  " .. name .. ": " .. byte_string
     end
     return currAddress, ret
 end
